@@ -4,6 +4,8 @@ import axios from "axios";
 import SummaryBar from "./components/SummaryBar"; // Import SummaryBar
 import "./App.css";
 
+const REACT_APP_API_URL = `https://leetcode-app-backend-production.up.railway.app`;
+
 function App() {
   const [data, setData] = useState([]);
   const [summaryData, setSummaryData] = useState([]);
@@ -18,7 +20,7 @@ function App() {
   // Fetch all questions for sorting and filtering
   const fetchAllQuestions = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/questions", {
+      const response = await axios.get(`${REACT_APP_API_URL}/questions`, {
         params: { page: 0, size: 10000 }, // Fetch a large number to get all questions
       });
       setAllQuestions(response.data.questions);
@@ -32,7 +34,7 @@ function App() {
   // Fetch paginated questions for display
   const fetchQuestions = async (page, size) => {
     try {
-      const response = await axios.get("http://localhost:5000/questions", {
+      const response = await axios.get(`${REACT_APP_API_URL}/questions`, {
         params: { page, size },
       });
       setData(response.data.questions);
@@ -85,7 +87,7 @@ function App() {
     }));
 
     try {
-      await axios.put(`http://localhost:5000/questions/${rowId}`, {
+      await axios.put(`${REACT_APP_API_URL}/questions/${rowId}`, {
         Done: value,
       });
       setData((prevData) =>
