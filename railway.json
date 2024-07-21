@@ -1,9 +1,9 @@
 {
     "build": {
-      "cmd": "cd backend && npm install && npm run build"
+      "cmd": "cd leetcode-app-backend && npm install && npm run build"
     },
     "start": {
-      "cmd": "cd backend && npm start"
+      "cmd": "cd leetcode-app-backend && npm start"
     },
     "privateNetworking": true
   }  
