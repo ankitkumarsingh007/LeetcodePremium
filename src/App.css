@@ -1,6 +1,4 @@
-.App {
-  text-align: center;
-}
+
 
 .App-logo {
   height: 40vmin;
@@ -37,12 +35,6 @@
   }
 }
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 20px 0;
-}
-
 .table th,
 .table td {
   border: 1px solid #ddd;
@@ -61,5 +53,28 @@
 .App input {
   margin: 20px 0;
 }
+
+/* src/App.css */
+
+.App {
+  font-family: Arial, sans-serif;
+}
+
+.table {
+  border-collapse: collapse;
+}
+
+.table th, .table td {
+  text-align: left;
+}
+
+.pagination {
+  margin-top: 10px;
+}
+
+.pagination button, .pagination select, .pagination input {
+  margin-right: 5px;
+}
+
 
 

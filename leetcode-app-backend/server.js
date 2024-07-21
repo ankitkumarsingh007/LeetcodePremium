@@ -32,9 +32,16 @@ const Question = mongoose.model("Question", questionSchema);
 
 // Routes
 app.get("/questions", async (req, res) => {
+  const { page = 0, size = 50 } = req.query; // Get page and size from query parameters
   try {
-    const questions = await Question.find();
-    res.json(questions);
+    const questions = await Question.find()
+      .skip(Number(page) * Number(size))
+      .limit(Number(size));
+    const totalQuestions = await Question.countDocuments(); // Total number of documents
+    res.json({
+      questions,
+      total: totalQuestions,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -51,20 +58,12 @@ app.post("/questions", async (req, res) => {
 });
 
 app.put("/questions/:id", async (req, res) => {
-  const { Done } = req.body;
-  if (typeof Done !== "boolean") {
-    return res.status(400).json({ message: "Invalid data format" });
-  }
-
   try {
-    const updatedQuestion = await Question.findOneAndUpdate(
-      { ID: req.params.id },
+    const updatedQuestion = await Question.findByIdAndUpdate(
+      req.params.id,
       req.body,
-      { new: true, runValidators: true }
+      { new: true }
     );
-    if (!updatedQuestion) {
-      return res.status(404).json({ message: "Question not found" });
-    }
     res.json(updatedQuestion);
   } catch (err) {
     res.status(400).json({ message: err.message });
