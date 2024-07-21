@@ -40,7 +40,7 @@ function App() {
       setData(response.data.questions);
       const initialCheckboxStates = {};
       response.data.questions.forEach((item) => {
-        initialCheckboxStates[item.ID] = item.Done || false;
+        initialCheckboxStates[item._id] = item.Done || false;
       });
       setCheckboxStates(initialCheckboxStates);
     } catch (error) {
@@ -80,19 +80,19 @@ function App() {
     fetchQuestions(pageIndex, pageSize); // Fetch paginated questions after sorting and filtering
   }, [pageIndex, pageSize]);
 
-  const handleCheckboxChange = async (rowId, value) => {
+  const handleCheckboxChange = async (id, value) => {
     setCheckboxStates((prevStates) => ({
       ...prevStates,
-      [rowId]: value,
+      [id]: value,
     }));
 
     try {
-      await axios.put(`${REACT_APP_API_URL}/questions/${rowId}`, {
+      await axios.put(`${REACT_APP_API_URL}/questions/${id}`, {
         Done: value,
       });
       setData((prevData) =>
         prevData.map((item) =>
-          item.ID === rowId ? { ...item, Done: value } : item
+          item._id === id ? { ...item, Done: value } : item
         )
       );
     } catch (error) {
@@ -108,27 +108,30 @@ function App() {
         Cell: ({ row }) => (
           <input
             type="checkbox"
-            checked={checkboxStates[row.original.ID] || false}
+            checked={checkboxStates[row.original._id] || false}
             onChange={(e) =>
-              handleCheckboxChange(row.original.ID, e.target.checked)
+              handleCheckboxChange(row.original._id, e.target.checked)
             }
           />
         ),
       },
-      { Header: "ID", accessor: "ID" },
-      { Header: "Title", accessor: "Title" },
-      { Header: "Acceptance", accessor: "Acceptance" },
-      { Header: "Difficulty", accessor: "Difficulty" },
-      { Header: "Frequency", accessor: "Frequency" },
       {
-        Header: "Leetcode Question Link",
-        accessor: "Leetcode Question Link",
-        Cell: ({ value }) => (
-          <a href={value} target="_blank" rel="noopener noreferrer">
-            {value}
+        Header: "Title",
+        accessor: "Title",
+        Cell: ({ row }) => (
+          <a
+            href={row.original["Leetcode Question Link"]}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "blue", textDecoration: "underline" }}
+          >
+            {row.original.Title}
           </a>
         ),
       },
+      { Header: "Acceptance", accessor: "Acceptance" },
+      { Header: "Difficulty", accessor: "Difficulty" },
+      { Header: "Frequency", accessor: "Frequency" },
     ],
     [checkboxStates]
   );
