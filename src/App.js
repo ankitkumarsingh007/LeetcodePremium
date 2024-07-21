@@ -1,123 +1,79 @@
-// src/App.js
-
 import React, { useEffect, useState } from "react";
 import { useTable, useSortBy, usePagination, useFilters } from "react-table";
-import Papa from "papaparse";
-import { db } from "./firebase"; // Import the Firebase Firestore instance
-import { collection, getDocs, setDoc, doc } from "firebase/firestore";
+import axios from "axios";
 import "./App.css";
 
 function App() {
   const [data, setData] = useState([]);
   const [checkboxStates, setCheckboxStates] = useState({});
   const [loading, setLoading] = useState(true);
-  const [pendingUpdates, setPendingUpdates] = useState({});
   const [difficultyFilter, setDifficultyFilter] = useState([]);
 
-  // Fetch CSV data
+  // Fetch data from the backend
   useEffect(() => {
-    const fetchCSV = async () => {
+    const fetchQuestions = async () => {
       try {
-        const response = await fetch("/google_alltime.csv");
-        const csvText = await response.text();
-        const parsedCSV = Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
-        }).data;
-        setData(parsedCSV);
-        fetchCheckboxStates(parsedCSV); // Fetch checkbox states after setting data
+        const response = await axios.get("http://localhost:5000/questions");
+        setData(response.data);
+        const initialCheckboxStates = {};
+        response.data.forEach((item) => {
+          initialCheckboxStates[item.ID] = item.Done || false;
+        });
+        setCheckboxStates(initialCheckboxStates);
       } catch (error) {
-        console.error("Error fetching CSV data: ", error);
+        console.error("Error fetching questions:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCSV();
-
-    // Load cached states from localStorage
-    const cachedStates = JSON.parse(
-      localStorage.getItem("checkboxStates") || "{}"
-    );
-    setCheckboxStates(cachedStates);
+    fetchQuestions();
   }, []);
 
-  // Fetch Firestore checkbox states
-  const fetchCheckboxStates = async (parsedCSV) => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "questions"));
-      const firestoreData = {};
-      querySnapshot.forEach((doc) => {
-        firestoreData[doc.id] = doc.data().Done || false;
-      });
-
-      const updatedCheckboxStates = {};
-      parsedCSV.forEach((item) => {
-        updatedCheckboxStates[item.ID] = firestoreData[item.ID] || false;
-      });
-
-      setCheckboxStates(updatedCheckboxStates);
-    } catch (error) {
-      console.error("Error fetching Firestore data: ", error);
-    }
-  };
-
-  const handleCheckboxChange = (rowId, value) => {
+  const handleCheckboxChange = async (rowId, value) => {
     // Update local state immediately
-    setCheckboxStates((prevStates) => {
-      const newState = {
-        ...prevStates,
-        [rowId]: value,
-      };
-      // Save to localStorage
-      localStorage.setItem("checkboxStates", JSON.stringify(newState));
-      return newState;
-    });
-
-    // Add to pending updates
-    setPendingUpdates((prevUpdates) => ({
-      ...prevUpdates,
+    setCheckboxStates((prevStates) => ({
+      ...prevStates,
       [rowId]: value,
     }));
-  };
 
-  const updateFirestore = async (rowId, value) => {
+    // Send update to backend
     try {
-      await setDoc(
-        doc(db, "questions", rowId),
-        { Done: value },
-        { merge: true }
+      await axios.put(`http://localhost:5000/questions/${rowId}`, {
+        Done: value,
+      });
+      // Update data state to reflect the change
+      setData((prevData) =>
+        prevData.map((item) =>
+          item.ID === rowId ? { ...item, Done: value } : item
+        )
       );
     } catch (error) {
-      console.error("Error updating document: ", error);
+      console.error(
+        "Error updating question:",
+        error.response ? error.response.data : error.message
+      );
     }
   };
 
   useEffect(() => {
-    // Function to flush pending updates to Firestore
-    const flushPendingUpdates = async () => {
-      for (const [key, value] of Object.entries(pendingUpdates)) {
-        await updateFirestore(key, value);
+    // Periodically re-fetch data to ensure latest state
+    const interval = setInterval(async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/questions");
+        setData(response.data);
+        const updatedCheckboxStates = {};
+        response.data.forEach((item) => {
+          updatedCheckboxStates[item.ID] = item.Done || false;
+        });
+        setCheckboxStates(updatedCheckboxStates);
+      } catch (error) {
+        console.error("Error fetching questions:", error);
       }
-      setPendingUpdates({});
-    };
+    }, 10000); // every 10 seconds
 
-    // Periodically flush updates
-    const interval = setInterval(flushPendingUpdates, 5000); // every 5 seconds
-
-    // Flush updates before window unloads
-    const handleBeforeUnload = (event) => {
-      flushPendingUpdates();
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [pendingUpdates]);
+    return () => clearInterval(interval);
+  }, []);
 
   const columns = React.useMemo(
     () => [
